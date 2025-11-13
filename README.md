@@ -1,5 +1,3 @@
-https://moddingwiki.shikadi.net/wiki/IMS_Format
-
 # 개요
 Javascript 로 Adlib 연주프로그램 IMPlay 의 사운드파일 IMS 내용을 보는(?) 웹페이지 제작 프로젝트
 
