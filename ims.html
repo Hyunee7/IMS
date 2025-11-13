@@ -7,7 +7,8 @@
   <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
   <style>
     HTML {font-family:Consolas,monospace;}
-    body {background-color:#333333;}
+    body {background-color:#333333;color:#888888}
+    #imsTitle {width:350px}
     TD {
         border-right:1px #232323 solid;
         border-bottom:1px #232323 solid;
@@ -26,7 +27,7 @@
         width:1px;
         color:red;
         background-color:#c3ff00;
-        height:6px;
+        height:10px;
         margin:0 0 0 0;
     }
     .insName, .insPitc, .insVolu, .insPann {
@@ -52,72 +53,38 @@
     #cur_byteDiv, #curByte {color:#996633}
     button {background-color: #00a6ed;border-radius: 10px;}
 
-
 .bar {
-    background-color: green;
-    width:15px;
+    /*background-color: green;*/
+    /**/width:15px;/**/
+    /*width:9%;*/
     height:1px;
     display: inline-block;
     vertical-align: bottom;
-    position: absolute;
+    position: relative;
     bottom: 0;
     left: 0;
+    margin-right:10px;
+    background-image: linear-gradient(0deg, #0a58ca 1px 6px, #333 7px 8px, #0a58ca 9px 14px, #333 15px 16px, #0a58ca 17px 22px, #333 23px 24px, #0a58ca 25px 30px, #333 31px 32px, #0a58ca 33px 38px, #333 39px 40px, #0a58ca 41px 46px, #333 47px 48px, #0a58ca 49px 54px, #333 55px 56px, #0a58ca 57px 62px, #333 63px 64px, #0a58ca 65px 70px, #333 71px 72px, #0a58ca 73px 78px, #333 79px 80px, #0a58ca 81px 86px, #333 87px 88px, #ad1b29 89px 94px, #333 95px 96px, #ad1b29 97px 102px, #333 103px 104px, #ad1b29 105px 110px, #333 111px 112px, #ad1b29 113px 118px, #333 119px 120px, #ad1b29 121px 125px);
 }
-
-.bar-1{
-    left: 20px;
-}
-
-.bar-2{
-    left: 40px;
-}
-
-.bar-3{
-    left: 60px;
-}
-
-.bar-4{
-    left: 80px;
-}
-
-.bar-5{
-    left: 100px;
-}
-
-.bar-6{
-    left: 120px;
-}
-
-.bar-7{
-    left: 140px;
-}
-
-.bar-8{
-    left: 160px;
-}
-
-.bar-9{
-    left: 180px;
-}
-
-.bar-10{
-    left: 200px;
-}
-
 
 
 .eq{
     position: relative;
     height: 130px;
+    display: flex;
+    /*justify-content:space-between;*/
+    flex-direction: row;
+    align-items: flex-end;
 }
-
 canvas {border:1px #666666 solid;background-color:#181818;}
+
   </style>
   <script src="kssmcode.js?v1.00"></script>
   <script>
     var params = URLSearchParams && new URLSearchParams(document.location.search.substring(1));
     var url = params && params.get("url") && decodeURIComponent(params.get("url"));
 
+    Number.prototype.to2 = function(){return this<10?'0'+this:this;}
     Number.prototype.format = function(){return new String(this).replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")}
 
 var ajaxcounter = 0;
@@ -287,8 +254,8 @@ var DEBUG = false;
                                                       + ' / Size : ' + uInt8Array.length.format()
                                                       + ' Bytes';
 
-        cur_byte = 71;
-        //doStart();
+        //cur_byte = 71;
+        doStart();
 //        TimeOut();
         /*
         //getByte(71, 'pos');
@@ -364,7 +331,8 @@ function TimeOut(){
         console.log(new Date().toJSON(),'Stop', new Date().getTime()-startTime)
         //startTime = new Time().getTime()-startTime;
         //console.log(new Time().getTime()-startTime);
-        doRun();
+        doRun();   // 재생중지
+        doStart(); // 재생관련 초기화
         cur_byte=71;
         return;
     }
@@ -377,7 +345,11 @@ function TimeOut(){
     //else setTimeout(TimeOut, ttem/10);
     //else setTimeout(TimeOut, 250-ttem);
     else {
-        var time = t_delay?((t_delay/ttem) * (298295/ttem/10)):1/50;
+        //var time = t_delay?((t_delay/ttem) * (298295/ttem/10)):1/50;
+        //var time = t_delay?(ttem * (298295/ttem/1000000)):1/50;
+        //var time = ttem * (298295/ttem/1000000);
+        //var time = t_delay;
+        var time = 1;
         setTimeout(TimeOut, time);
     }
     chkCount++;
@@ -387,6 +359,7 @@ function prtCurByte(ch){
     //curByte.innerText = cur_byte.format() + ' / ' + imsHeader.dataSize.format() + ' ( ' + (Math.round(cur_byte/imsHeader.dataSize*1000)/10) + '% )';
     var b = cur_byte-71;
     var s = imsHeader.dataSize;
+    ch=ch||'';
     //curByte.innerText = b.format() + ' / ' + s.format() + ' ( ' + (Math.round(b/s*1000)/10) + '% )';
     curByte.innerText = b.format() + ' / ' + s.format() + ' ( ' + (b/s*100).toFixed(2) + '% ) ' + ch;
     //console.log('prtCurByte( '+ ch +' )');
@@ -401,27 +374,11 @@ function ins_rt( ch ){
     SetVoiceTimbre(ch,timbre);
 }
 
-/*
-void vol_rt( int ch )
-{  cur_vol[ch]=readmem(cur_byte++);
-   SetVoiceVolume( ch,cur_vol[ch]);
-}
-*/
 function vol_rt( ch ){
     cur_vol[ch]=uInt8Array[cur_byte++];
     SetVoiceVolume( ch, cur_vol[ch] );
 }
 
-/*
-void pit_rt( int ch)
-{  unsigned int data1;
-   data1=readmem(cur_byte+1)<<8;
-   data1+=readmem(cur_byte);
-   data1=data1>>1;
-   SetVoicePitch(ch,data1);
-   cur_byte+=2;
-}
-*/
 function pit_rt( ch ){
     data1 =uInt8Array[cur_byte+1]<<8;
     data1+=uInt8Array[cur_byte  ];
@@ -542,6 +499,7 @@ function SetClkRate(rate){
 function NoteOff( ch ){
     if(DEBUG) console.log('NoteOff('+ch+')');
     document.querySelector('#insPanCh'+ch).innerText = '';
+    document.querySelector('#insLvCh' +ch).style.width = '1px';
 
     NOTE[ch] = 0;
     //fluctuate(document.querySelector('.bar-'+ch), 5);
@@ -564,6 +522,9 @@ function NoteOn ( ch, data ){
 
     NOTE[ch] = data;
     fluctuate(document.querySelector('.bar-'+ch), cur_vol[ch]);
+
+    ctx.fillStyle = NOTEC[ch];
+    ctx.fillRect(canvasX,canvasHeight-data,1,1);
 }
 
 // 사운드 이퀄라이저 애니메이션
@@ -598,6 +559,7 @@ function fluctuate(bar,vol,) {
             //btnPlay.innerText = 'Play';
             btnPlay.innerText = '▶️';
             isRun = false;
+            //timer.pause();
         } else {
             startTime = new Date().getTime();
             console.log(new Date().toJSON(),'Play')
@@ -606,15 +568,18 @@ function fluctuate(bar,vol,) {
             isRun = true;
             TimeOut();
             DrawNote();
+            //timer.resume();
         }
     }
     function doStart(){
         cur_byte = 71; // ims data 시작위치로
         prtCurByte();  // cur_byte 관련 정보 출력 
+        playTime=0;    // 연주시간 초기화
 
         // canvas reset
         canvasX=0;
         ctx.clearRect(0,0,canvasWidth,canvasHeight);
+
     }
 
     var NOTE  = [0,0,0,0,0, 0,0,0,0,0, 0];
@@ -627,7 +592,7 @@ function fluctuate(bar,vol,) {
         NOTE.forEach((item,idx)=>{
             if(item) {
                 ctx.fillStyle = NOTEC[idx];
-                ctx.fillRect(canvasX,item,1,1);
+                ctx.fillRect(canvasX,canvasHeight-item,1,1);
             }
         });
         canvasX++;
@@ -639,8 +604,44 @@ function fluctuate(bar,vol,) {
         if(isRun)setTimeout(DrawNote,18);
     }
 
+var Timer = function(callback, delay) {
+    var timerId, start, remaining = delay;
+
+    this.pause = function() {
+        window.clearTimeout(timerId);
+        timerId = null;
+        remaining -= Date.now() - start;
+    };
+
+    this.resume = function() {
+        if (timerId) {
+            return;
+        }
+
+        start = Date.now();
+        timerId = window.setTimeout(callback, remaining);
+    };
+
+    this.resume();
+};
+
+var playTime = 0;
+/*
+var timer = new Timer( ()=>{
+    console.log('playTime',playTime);
+    runTime.innerText = `0${Math.floor(playTime/60)}:${(playTime%60).to2()}`;
+    playTime++;
+}, 1000 );
+*/
+var t = window.setInterval(function() {
+  if(isRun) {
+    runTime.innerText = `0${Math.floor(playTime/60)}:${(playTime%60).to2()}`;
+    playTime++;
+  }
+}, 1000);
+
 var ctx;
-var canvasWidth=window.innerWidth-20;
+var canvasWidth=window.innerWidth-10;
 var canvasHeight=150;
     window.addEventListener("load", function(e){
         if(DEBUG) console.log(new Date().toJSON(),'window.onload START');
@@ -650,22 +651,25 @@ var canvasHeight=150;
         Ajax(url || 'DEEPYOU.IMS')
         if(DEBUG) console.log(new Date().toJSON(),'window.onload END');
 
-var canvas = document.getElementById("canvas");
-canvas.width =canvasWidth;
-canvas.height=canvasHeight;
-//var ctx = canvas.getContext("2d");
-ctx = canvas.getContext("2d");
-ctx.fillStyle = "blue";
-//ctx.fillRect(10, 10, 100, 100);
-
+        var canvas = document.getElementById("canvas");
+        canvas.width =canvasWidth;
+        canvas.height=canvasHeight;
+        //var ctx = canvas.getContext("2d");
+        ctx = canvas.getContext("2d");
+        ctx.fillStyle = "blue";
+        //ctx.fillRect(10, 10, 100, 100);
     });
 
   </script>
 </head>
 <body>
-<div id=imsTitle>Title</div>
+<div style="display: -webkit-box;">
+  <div id=imsTitle>Title</div>
+  <button onClick="doStart()">⏮</button>
+  <button id=btnPlay onClick="doRun()">▶️</button>
+</div>
 <div id=imsFile>Filename Size</div>
-<div id=imsTempo>TEMPO : 255</div>
+<div id=imsTempoDiv><span id=runTime>00:00</span>/00:49 <span id=imsTempo>TEMPO : 255</span></div>
 <div id=cur_byteDiv>cur_byte : <span id=curByte>0</span></div>
 <div id=imsIns>
   <table border=0>
@@ -795,8 +799,6 @@ ctx.fillStyle = "blue";
       <td class=insEven id=insEvtCh10>&nbsp;</td>
     </tr>
   </table>
-  <button onClick="doStart()">⏮</button>
-  <button id=btnPlay onClick="doRun()">▶️</button>
 </div>
 <!-- 
     <div class="bars-container">
