@@ -55,40 +55,57 @@
 
 .bar {
     /*background-color: green;*/
-    /**/width:15px;/**/
-    /*width:9%;*/
+    /**/background-color: #0a58ca;/**/
+    /** /width:15px;/**/
+    /**/width:7%;/**/
     height:1px;
     display: inline-block;
     vertical-align: bottom;
     position: relative;
     bottom: 0;
     left: 0;
-    margin-right:10px;
-    background-image: linear-gradient(0deg, #0a58ca 1px 6px, #333 7px 8px, #0a58ca 9px 14px, #333 15px 16px, #0a58ca 17px 22px, #333 23px 24px, #0a58ca 25px 30px, #333 31px 32px, #0a58ca 33px 38px, #333 39px 40px, #0a58ca 41px 46px, #333 47px 48px, #0a58ca 49px 54px, #333 55px 56px, #0a58ca 57px 62px, #333 63px 64px, #0a58ca 65px 70px, #333 71px 72px, #0a58ca 73px 78px, #333 79px 80px, #0a58ca 81px 86px, #333 87px 88px, #ad1b29 89px 94px, #333 95px 96px, #ad1b29 97px 102px, #333 103px 104px, #ad1b29 105px 110px, #333 111px 112px, #ad1b29 113px 118px, #333 119px 120px, #ad1b29 121px 125px);
+    /*margin-right:10px;*/
+    background-image: linear-gradient(0deg, #0a58ca 1px 6px, #333 7px 8px, #0a58ca 9px 14px, #333 15px 16px, #0a58ca 17px 22px, #333 23px 24px, #0a58ca 25px 30px, #333 31px 32px, #0a58ca 33px 38px, #333 39px 40px, #0a58ca 41px 46px, #333 47px 48px, #0a58ca 49px 54px, #333 55px 56px, #0a58ca 57px 62px, #333 63px 64px, #0a58ca 65px 70px, #333 71px 72px, #0a58ca 73px 78px, #333 79px 80px, #0a58ca 81px 86px, #333 87px 88px, #d33a3a 89px 94px, #333 95px 96px, #d33a3a 97px 102px, #333 103px 104px, #d33a3a 105px 110px, #333 111px 112px, #d33a3a 113px 118px, #333 119px 120px, #d33a3a 121px 125px);
+    /** /
+        background-image: linear-gradient(0deg, #0a58ca 0% 5%, #333 5% 6%, #0a58ca 6% 11%, #333 11% 12%, #0a58ca 12% 17%, #333 17% 18%, #0a58ca 18% 23%, #333 23% 24%, #0a58ca 24% 29%, #333 29% 30%, #0a58ca 30% 35%, #333 35% 36%, #0a58ca 36% 41%, #333 41% 42%, #0a58ca 42% 47%, #333 47% 48%, #0a58ca 48% 53%, #333 53% 54%, #0a58ca 54% 59%, #333 59% 60%, #0a58ca 60% 65%, #333 65% 66%, #0a58ca 66% 71%, #333 71% 72%, #d33a3a 72% 77%, #333 77% 78%, #d33a3a 78% 83%, #333 83% 84%, #d33a3a 84% 89%, #333 89% 90%, #d33a3a 90% 95%, #333 95% 96%, #d33a3a 96% 100%)
+    /***/
 }
-
+@keyframes slidein {
+  to {
+    height:1px;
+  }
+}
 
 .eq{
     position: relative;
     height: 130px;
+    border:1px #666666 solid;
     display: flex;
-    /*justify-content:space-between;*/
+    /**/justify-content:space-between;/**/
     flex-direction: row;
     align-items: flex-end;
 }
-canvas {border:1px #666666 solid;background-color:#181818;}
+canvas {
+    border:1px #666666 solid;
+    background-color:#181818;
+    width:100%;
+    height:130px;
+}
 
   </style>
   <script src="kssmcode.js?v1.00"></script>
   <script>
     var params = URLSearchParams && new URLSearchParams(document.location.search.substring(1));
     var url = params && params.get("url") && decodeURIComponent(params.get("url"));
+    var d = params && params.get("d") && decodeURIComponent(params.get("d"));
 
     Number.prototype.to2 = function(){return this<10?'0'+this:this;}
+    Number.prototype.timeFormat = function(){ return Math.floor(this/60)+':'+(this%60).to2(); }
     Number.prototype.format = function(){return new String(this).replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")}
 
 var ajaxcounter = 0;
-var file = ''
+var file = '';
+var tick=0;
 var isRun = false;
 var DEBUG = false;
     function Ajax(url,callback){
@@ -235,7 +252,7 @@ var DEBUG = false;
         if(DEBUG) console.log(new Date().toJSON(),'ch_num',ch_num);
 
 //        console.log(new Date().toJSON(),'Data pos',pos);
-        getByte(imsHeader.dataSize+71, 'pos');
+        getByte(imsHeader.dataSize+71, 'pos'); // 71 : header size + 1
 //        console.log(new Date().toJSON(),'pos',pos);
 
         tmp2 = getByte(1, 'int8')  // ?? - 119 : 0111 0111
@@ -336,6 +353,8 @@ function TimeOut(){
         cur_byte=71;
         return;
     }
+    tick+=t_delay;
+    tickNo.innerText = tick.format();
     //return (t_delay);
     //if(chkCount>11) return;
     //if(chkCount>300) return;
@@ -346,10 +365,11 @@ function TimeOut(){
     //else setTimeout(TimeOut, 250-ttem);
     else {
         //var time = t_delay?((t_delay/ttem) * (298295/ttem/10)):1/50;
+        var time = t_delay?((t_delay/ttem) * (298295/ttem/20)):1/50;
         //var time = t_delay?(ttem * (298295/ttem/1000000)):1/50;
         //var time = ttem * (298295/ttem/1000000);
         //var time = t_delay;
-        var time = 1;
+        //var time = 1;
         setTimeout(TimeOut, time);
     }
     chkCount++;
@@ -387,21 +407,6 @@ function pit_rt( ch ){
     cur_byte+=2;
 }
 
-/*
-void tem_rt()
-{ int data1,data2;
-  unsigned int rate;
-  long ttem;
-  cur_byte+=2;
-  data1=readmem(cur_byte++);
-  data2=readmem(cur_byte++);
-  ttem=basic_tempo;
-  ttem=ttem*data2/128+basic_tempo*data1;
-  rate=(298295l/ttem);
-  SetClkRate(rate);
-  cur_byte++;
-}
-*/
 function tem_rt(){
     cur_byte+=2;
     data1=uInt8Array[cur_byte++];
@@ -414,19 +419,7 @@ function tem_rt(){
     cur_byte++;
 }
 
-/*
-void note1_rt( int ch)
-{  int data1;
-   data1=readmem(cur_byte+1);
-   NoteOff (ch);
-   if ( cur_vol[ch]!=data1 )
-    {  cur_vol[ch]=data1;
-       SetVoiceVolume( ch,data1);
-    }
-   NoteOn ( ch,readmem(cur_byte));
-   cur_byte+=2;
-}
-*/
+cur_vol = [0,0,0,0,0, 0,0,0,0,0, 0];
 function note1_rt( ch ){
     data1=uInt8Array[cur_byte+1];
     NoteOff (ch);
@@ -438,22 +431,6 @@ function note1_rt( ch ){
     cur_byte+=2;
 }
 
-/*
-void note2_rt( int ch)
-{  int data1;
-   data1=readmem(cur_byte+1);
-   NoteOff (ch);
-   if ( data1 )
-      {  if ( cur_vol[ch]!=data1 )
-	      { cur_vol[ch]=data1;
-		SetVoiceVolume( ch,data1);
-	      }
-	 NoteOn ( ch,readmem(cur_byte));
-      }
-   cur_byte+=2;
-}
-*/
-cur_vol = [0,0,0,0,0, 0,0,0,0,0, 0];
 function note2_rt(ch){
     data1=uInt8Array[cur_byte+1];
     NoteOff (ch);
@@ -502,7 +479,7 @@ function NoteOff( ch ){
     document.querySelector('#insLvCh' +ch).style.width = '1px';
 
     NOTE[ch] = 0;
-    //fluctuate(document.querySelector('.bar-'+ch), 5);
+    //fluctuate(document.querySelector('.bar-'+ch), 1);
 }
 
 function SetVoiceVolume( ch, data1 ){
@@ -510,7 +487,7 @@ function SetVoiceVolume( ch, data1 ){
     document.querySelector('#insVolCh'+ch).innerText = data1;
 
     cur_vol[ch]=data1; // add 2025-03-07
-    fluctuate(document.querySelector('.bar-'+ch), cur_vol[ch]);
+    //fluctuate(document.querySelector('.bar-'+ch), cur_vol[ch]);
 }
 
 var PIT_METER=["C ", "C#", "D ", "D#", "E ", "F ", "F#", "G ", "G#", "A ", "A#", "B "];
@@ -521,10 +498,10 @@ function NoteOn ( ch, data ){
     document.querySelector('#insPanCh'+ch).innerText = '<>';
 
     NOTE[ch] = data;
-    fluctuate(document.querySelector('.bar-'+ch), cur_vol[ch]);
+    //fluctuate(document.querySelector('.bar-'+ch), cur_vol[ch]);
 
-    ctx.fillStyle = NOTEC[ch];
-    ctx.fillRect(canvasX,canvasHeight-data,1,1);
+//    ctx.fillStyle = NOTEC[ch];
+//    ctx.fillRect(canvasX,canvas.offsetHeight-data,1,1);
 }
 
 // 사운드 이퀄라이저 애니메이션
@@ -539,17 +516,22 @@ function fluctuate(bar,vol,) {
         //fluctuate($(this));
     });
     */
-    //bar.style.height = vol+'px';
+    bar.style.height = vol+'px';
+    //bar.style.height = (vol/127*100)+'%';
+    //bar.style.cssText = "animation-duration:3s;animation-name:slidein;height:${vol};";
+
+    /** /
     bar.animate([
         {height:  vol     + 'px'},
-        {height:  vol     + 'px'},
+//        {height:  vol     + 'px'},
         {height: (vol/95) + 'px'},
 //        {height: (vol/90) + 'px'},
 //        {height: (vol/80) + 'px'},
 //        {height: (vol/60) + 'px'},
 //        {height: (vol/30) + 'px'},
         {height:  1       + 'px'}
-    ],1270);
+    ],3000);
+    /**/
     //bar.animate({height:vol+'px'},127);
 }
 
@@ -559,7 +541,6 @@ function fluctuate(bar,vol,) {
             //btnPlay.innerText = 'Play';
             btnPlay.innerText = '▶️';
             isRun = false;
-            //timer.pause();
         } else {
             startTime = new Date().getTime();
             console.log(new Date().toJSON(),'Play')
@@ -568,17 +549,16 @@ function fluctuate(bar,vol,) {
             isRun = true;
             TimeOut();
             DrawNote();
-            //timer.resume();
         }
     }
     function doStart(){
         cur_byte = 71; // ims data 시작위치로
-        prtCurByte();  // cur_byte 관련 정보 출력 
+        //prtCurByte();  // cur_byte 관련 정보 출력 
         playTime=0;    // 연주시간 초기화
 
         // canvas reset
         canvasX=0;
-        ctx.clearRect(0,0,canvasWidth,canvasHeight);
+        ctx.clearRect(0,0,canvas.offsetWidth,canvas.offsetHeight);
 
     }
 
@@ -592,13 +572,16 @@ function fluctuate(bar,vol,) {
         NOTE.forEach((item,idx)=>{
             if(item) {
                 ctx.fillStyle = NOTEC[idx];
-                ctx.fillRect(canvasX,canvasHeight-item,1,1);
-            }
+                ctx.fillRect(canvasX,canvas.offsetHeight-item,1,1);
+
+                fluctuate(document.querySelector('.bar-'+idx), cur_vol[idx]);
+            }else
+                fluctuate(document.querySelector('.bar-'+idx), 1);
         });
         canvasX++;
-        if(canvasX>=canvasWidth){
+        if(canvasX>=canvas.offsetWidth){
             canvasX=0;
-            ctx.clearRect(0,0,canvasWidth,canvasHeight);
+            ctx.clearRect(0,0,canvas.offsetWidth,canvas.offsetHeight);
         }
         //if(isRun)setTimeout(DrawNote,20);
         if(isRun)setTimeout(DrawNote,18);
@@ -635,29 +618,28 @@ var timer = new Timer( ()=>{
 */
 var t = window.setInterval(function() {
   if(isRun) {
-    runTime.innerText = `0${Math.floor(playTime/60)}:${(playTime%60).to2()}`;
+    runTime.innerText = `${Math.floor(playTime/60)}:${(playTime%60).to2()}`;
     playTime++;
   }
 }, 1000);
 
 var ctx;
-var canvasWidth=window.innerWidth-10;
-var canvasHeight=150;
     window.addEventListener("load", function(e){
         if(DEBUG) console.log(new Date().toJSON(),'window.onload START');
         //Ajax(url || 'KJM1.IMS')
         //Ajax(url || '100MEET.IMS')
         //Ajax(url || 'COM-DRAM.IMS')
         Ajax(url || 'DEEPYOU.IMS')
-        if(DEBUG) console.log(new Date().toJSON(),'window.onload END');
+        orgTime.innerText = (+d).timeFormat();
 
         var canvas = document.getElementById("canvas");
-        canvas.width =canvasWidth;
-        canvas.height=canvasHeight;
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
         //var ctx = canvas.getContext("2d");
         ctx = canvas.getContext("2d");
         ctx.fillStyle = "blue";
         //ctx.fillRect(10, 10, 100, 100);
+        if(DEBUG) console.log(new Date().toJSON(),'window.onload END');
     });
 
   </script>
@@ -669,7 +651,7 @@ var canvasHeight=150;
   <button id=btnPlay onClick="doRun()">▶️</button>
 </div>
 <div id=imsFile>Filename Size</div>
-<div id=imsTempoDiv><span id=runTime>00:00</span>/00:49 <span id=imsTempo>TEMPO : 255</span></div>
+<div id=imsTempoDiv><span id=runTime>0:00</span>/<span id=orgTime>00:49</span> <span id=imsTempo>TEMPO : 255</span> - TICK<span id=tickNo>0</span></div>
 <div id=cur_byteDiv>cur_byte : <span id=curByte>0</span></div>
 <div id=imsIns>
   <table border=0>
@@ -827,7 +809,7 @@ var canvasHeight=150;
     <span class="bar bar-10"></span>
 </div>
 <div id=canvasDiv>
-  <canvas id="canvas" width="300" height="100">
+  <canvas id="canvas" width="100" height="100">
     캔버스의 내용을 설명하는 대체 텍스트
   </canvas>
 </div>
