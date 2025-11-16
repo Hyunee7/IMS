@@ -10,17 +10,20 @@
     body {background-color:#333333;color:#888888}
     #imsTitle {width:350px}
     TD {
-        border-right:1px #232323 solid;
-        border-bottom:1px #232323 solid;
+        border-right:1px #666666 solid;
+        border-bottom:1px #666666 solid;
         font-family:monospace;
+        margin:0;
+        padding:0;
+        /*line-height:7px;*/
     }
     table {
-        border-top:1px #232323 solid;
-        border-left:1px #232323 solid;
+        border-top:1px #666666 solid;
+        border-left:1px #666666 solid;
     }
     .th{color:#aaaaaa}
     .channel {
-        
+        padding-right: 2px;
         color:green;
     }
     .level {
@@ -47,6 +50,12 @@
     .insEven {
         font-family:Monaco,gulimche
         color:#006600;
+    }
+    @supports (-webkit-touch-callout: none) {
+      /* CSS specific to iOS devices */ 
+        .insEven {
+            display:none;
+        }
     }
     #imsTitle {color:#a0a0a0;font-size: x-large;}
     #imsTempo, #imsFile {color:#a0a0a0;}
@@ -92,6 +101,10 @@ canvas {
     height:130px;
 }
 
+    #imsIns{
+        display: flex;
+        flex-wrap: wrap;
+    }
   </style>
   <script src="kssmcode.js?v1.00"></script>
   <script>
@@ -108,40 +121,6 @@ var file = '';
 var tick=0;
 var isRun = false;
 var DEBUG = false;
-    function Ajax(url,callback){
-        //console.log(new Date().toISOString(), 'start');
-        var xhr = new XMLHttpRequest();
-        ajaxcounter++;
-
-        xhr.open('GET', url, true);
-//        xhr.open('GET', url, false);
-        xhr.responseType = 'arraybuffer';
-        xhr.withCredentials = true;
-        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest'); xhr.setRequestHeader('Access-Control-Allow-Origin', '*');
-
-        // via Cache-Control header:
-        xhr.setRequestHeader("Cache-Control", "no-cache, no-store, max-age=0");
-
-        // fallbacks for IE and older browsers:
-        xhr.setRequestHeader("Expires", "Tue, 01 Jan 1980 1:00:00 GMT");
-        xhr.setRequestHeader("Pragma", "no-cache"); //Edit: I noticed this is required for Chrome some time ago... forgot to mention here
-
-        // Process the response when the request is ready.
-        xhr.onload = function(e) {
-          if (this.status == 200) {
-              //callback(this.response);
-              //console.log(new Date().toJSON(),'xhr.responseURL',xhr.responseURL);
-              file = xhr.responseURL;
-              //console.log(new Date().toJSON(),'this.response',this.response);
-              //new loadList(this.response)
-              new loadIMS(this.response)
-              ajaxcounter--;
-              //console.log(new Date().toJSON(),'ajaxcounter',ajaxcounter)
-              //if(!ajaxcounter) listPut(1);
-          }
-        };
-        xhr.send();
-    }
 
     var uInt8Array;
     var imsHeader;
@@ -219,23 +198,23 @@ var DEBUG = false;
         // IMS 해더 정의
         function ImsHeader(){
             return {
-                 majorVersion : getByte( 1, 'int8' ) //  1
-                ,minorVersion : getByte( 1, 'int8' ) //  2
-                ,tuneld       : getByte( 4, 'int32') //  6
-                ,tuneName     : getByte(30         ) // 36
-                ,tickBeat     : getByte( 1, 'int8' ) // 37
-                ,beatMeasure  : getByte( 1, 'int8' ) // 38
-                ,totalTick    : getByte( 4, 'int32') // 42
-                ,dataSize     : getByte( 4, 'int32') // 46
-                ,nrCommand    : getByte( 4, 'int32') // 50
-                ,srctickBeat  : getByte( 1, 'int8' ) // 51
-                ,filler       : getByte( 7         ) // 58
+                 majorVersion : getByte( 1, 'int8' ) //  1    주 버전 번호(일반적으로 1)
+                ,minorVersion : getByte( 1, 'int8' ) //  2    부 버전 번호(일반적으로 0)
+                ,tuneld       : getByte( 4, 'int32') //  6    노래 식별 번호
+                ,tuneName     : getByte(30         ) // 36    노래 제목, null 종료
+                ,tickBeat     : getByte( 1, 'int8' ) // 37    비트당 틱 수
+                ,beatMeasure  : getByte( 1, 'int8' ) // 38    소절당 비트수
+                ,totalTick    : getByte( 4, 'int32') // 42    노래의 길이(틱)
+                ,dataSize     : getByte( 4, 'int32') // 46    MIDI 데이터 블록의 길이(바이트)
+                ,nrCommand    : getByte( 4, 'int32') // 50    MIDI 이벤트 수 (0xFC:종료 포함)
+                ,srctickBeat  : getByte( 1, 'int8' ) // 51    0 (이외 값은 발견하지 못함.)
+                ,filler       : getByte( 7         ) // 58    패딩, 0으로 설정
 
-                ,soundMode    : getByte( 1, 'int8' ) // 59 /* 0:melodic, 1:peroussive */
-                ,pitchBRange  : getByte( 1, 'int8' ) // 60 /* 1 - 12 */
+                ,soundMode    : getByte( 1, 'int8' ) // 59   OPL 리듬 모드: 0=멜로딕(꺼짐), 1=타악기(켜짐)
+                ,pitchBRange  : getByte( 1, 'int8' ) // 60    피치벤드 범위(1-12)
 
-                ,basicTempo   : getByte( 2, 'int16') // 62
-                ,filler2      : getByte( 8         ) // 70
+                ,basicTempo   : getByte( 2, 'int16') // 62    노래 템포, 분당 비트 수.
+                ,filler2      : getByte( 8         ) // 70    패딩, 0으로 설정
             }
         }
 
@@ -252,10 +231,12 @@ var DEBUG = false;
         if(DEBUG) console.log(new Date().toJSON(),'ch_num',ch_num);
 
 //        console.log(new Date().toJSON(),'Data pos',pos);
-        getByte(imsHeader.dataSize+71, 'pos'); // 71 : header size + 1
+        getByte(imsHeader.dataSize+72, 'pos'); // 72 : header size(70) + 악기시작 서명(2)
 //        console.log(new Date().toJSON(),'pos',pos);
 
-        tmp2 = getByte(1, 'int8')  // ?? - 119 : 0111 0111
+        //사용악기 시작 서명 0x77 0x77 ("ww")
+        //tmp2_1 = getByte(1, 'int8')  // ?? - 119 : 0111 0111
+        //tmp2_2 = getByte(1, 'int8')  // ?? - 119 : 0111 0111
         //console.log(new Date().toJSON(),'tmp2',tmp2);
 
         ins_num = getByte(2, 'int16');
@@ -273,6 +254,10 @@ var DEBUG = false;
 
         //cur_byte = 71;
         doStart();
+//        getDuration(); //재생시간 구함
+        var dur = getDuration()
+        tickTime.innerHTML = Math.round(dur*100)/100 + ' ' + Math.round(dur).timeFormat();
+
 //        TimeOut();
         /*
         //getByte(71, 'pos');
@@ -302,6 +287,121 @@ var DEBUG = false;
         ///////////////////////////////////////////////////////////////////////
 
     }
+
+// Note 진행 Byte 수 출력
+function prtCurByte(ch){
+    //curByte.innerText = cur_byte.format() + ' / ' + imsHeader.dataSize.format() + ' ( ' + (Math.round(cur_byte/imsHeader.dataSize*1000)/10) + '% )';
+    var b = cur_byte-71;
+    var s = imsHeader.dataSize;
+    ch=ch||'';
+    //curByte.innerText = b.format() + ' / ' + s.format() + ' ( ' + (Math.round(b/s*1000)/10) + '% )';
+    curByte.innerText = b.format() + ' / ' + s.format() + ' ( ' + (b/s*100).toFixed(2) + '% ) ' + ch;
+    //console.log('prtCurByte( '+ ch +' )');
+}
+
+
+// 재생시간 얻기
+function getDuration(){
+    var tickByTime=0;
+    var data2=0;
+    var t_delay;
+    while(true){
+        idcode = uInt8Array[cur_byte];
+
+        if ( idcode <0x80 ) idcode=idcode_st;
+        else { cur_byte++;idcode_st=idcode; }
+
+        ch=0x0f & idcode;
+
+        switch ( 0xf0 & idcode ){
+            case 0xc0:cur_byte++;break;
+            case 0xa0:cur_byte++;break;
+            case 0xe0:cur_byte+=2;break;
+            case 0xf0:
+                cur_byte+=2; // 0x7F 시작 0x00 예약 건너뜀
+                var data1=uInt8Array[cur_byte++]; // XX
+                //var data2=uInt8Array[cur_byte++]; // YY 1/128
+                 data2=uInt8Array[cur_byte++]; // YY 1/128
+                ttem=imsHeader.basicTempo * data2 / 128 + imsHeader.basicTempo * data1;
+                //ttem=Math.floor(imsHeader.basicTempo * data2 / 128 + imsHeader.basicTempo * data1);
+                //ttem=Math.round(imsHeader.basicTempo * data2 / 128 + imsHeader.basicTempo * data1);
+                //tickByTime += 60/imsHeader.tickBeat/ttem ;
+                //tickByTime += ttem/60/imsHeader.tickBeat*data2 ;
+                //tickByTime += ttem/60*data2 ;
+                //tickByTime += ttem/60;
+                //tickByTime += ttem/imsHeader.tickBeat/60;
+                //tickByTime += ttem/imsHeader.tickBeat/60;
+                //tickByTime += data1 ;
+                //tickByTime += imsHeader.basicTempo/imsHeader.tickBeat*data1 ;
+                //tickByTime += ttem/imsHeader.tickBeat*data1 ;
+                //tickByTime += Math.round(ttem/imsHeader.tickBeat*data1) ;
+                //console.log(data1,data2,ttem,imsHeader.tickBeat,ttem/imsHeader.tickBeat);
+                cur_byte++; // 0xF7 종료 건너뜀
+                break;
+            case 0x80:
+                //console.log('0x80');
+                cur_byte+=2;
+                break;
+            case 0x90:cur_byte+=2;break;
+        }
+
+        t_delay=0;
+        function time_size(){
+            ch=uInt8Array[cur_byte++];
+            if ( uInt8Array[cur_byte]==0xfc ) cur_byte=0; // data 종료
+            if ( ch==0xf8 ){
+                t_delay+=240;
+                time_size();
+            }
+        }
+        time_size();
+        if ( ch ){
+            t_delay+=ch;
+//            tickByTime += 60*t_delay/imsHeader.tickBeat/ttem ;
+        } //else continue;
+
+        if(cur_byte==0){
+            cur_byte=71;
+//            tick=0;
+            break;
+        }
+//        tick+=t_delay;
+//        tickByTime += Math.floor(ttem/60)*t_delay;
+//        tickByTime += Math.floor(ttem*t_delay)/60;
+//        tickByTime += Math.floor(ttem/60)*(t_delay?t_delay:1);
+
+//		EST_SECOND2+=(60*(double)(FIN_TIME_TICK-TEMP_TICK)/(double)TPB/(double)TEMPO_IS);
+//		EST_SECOND2+=(60*(FIN_TIME_TICK-TEMP_TICK)/TPB/TEMPO_IS);
+//        tickByTime += 60*t_delay/imsHeader.tickBeat/ttem ;
+//        tickByTime += 60*t_delay/imsHeader.tickBeat/ttem ;
+/** /
+        if(data2)  tickByTime += 60*t_delay/imsHeader.tickBeat/ttem;
+        //else       tickByTime += imsHeader.tickBeat/ttem/24;
+        else       tickByTime += ttem/imsHeader.tickBeat/60;
+//        else       tickByTime += imsHeader.basicTempo/imsHeader.tickBeat/60;
+/**/
+//        tickByTime += Math.round(60*t_delay/imsHeader.tickBeat/ttem) ;
+//        tickByTime += Math.round(60*t_delay/imsHeader.tickBeat/ttem*10)/10 ;
+//        tickByTime += (Math.round(60*t_delay/imsHeader.tickBeat/ttem*10)/10) ;
+//        tickByTime += Math.round(60*t_delay/imsHeader.tickBeat/ttem*10) ;
+//        if(t_delay) tickByTime += 60*t_delay/imsHeader.tickBeat/ttem;
+if(t_delay){
+    if(t_delay<20000)
+        tickByTime += 60*t_delay/imsHeader.tickBeat/ttem;
+//    else
+//        tickByTime += 1;
+//        console.log(t_delay, ttem, 60*t_delay/imsHeader.tickBeat/ttem);;
+        //console.log(t_delay, ttem, tickByTime)
+}
+if(t_delay>20000) console.log(t_delay, ttem, data1, 60*t_delay/imsHeader.tickBeat/ttem)
+//        tickByTime += ttem*t_delay / imsHeader.tickBeat / 60;
+//        tickByTime += t_delay / imsHeader.tickBeat / 60 * ttem;
+//        tickByTime += t_delay / 60;
+//        tickByTime += t_delay / imsHeader.tickBeat / 60;
+    }
+    return tickByTime;
+}
+
 
 chkCount = 0;
 var startTime = 0;
@@ -345,7 +445,11 @@ function TimeOut(){
         //curByte.innerText = '종료';
         //curByte.innerText = cur_byte.format() + ' / ' + imsHeader.dataSize.format() + ' ( ' + (Math.round(cur_byte/imsHeader.dataSize*1000)/10) + '% ) 종료';
         curByte.innerText += ' 종료';
-        console.log(new Date().toJSON(),'Stop', new Date().getTime()-startTime)
+        console.log(new Date().toJSON(),'Stop'
+                   , new Date().getTime()-startTime
+                   , new Date( new Date().getTime()-startTime )
+                        .toJSON()
+                        .replace(/\d{4}\-\d{2}-\d{2}T\d{2}:(\d{2}:\d{2})\.\d{1,3}Z/,'$1'));
         //startTime = new Time().getTime()-startTime;
         //console.log(new Time().getTime()-startTime);
         doRun();   // 재생중지
@@ -365,24 +469,18 @@ function TimeOut(){
     //else setTimeout(TimeOut, 250-ttem);
     else {
         //var time = t_delay?((t_delay/ttem) * (298295/ttem/10)):1/50;
-        var time = t_delay?((t_delay/ttem) * (298295/ttem/20)):1/50;
+        //var time = t_delay?((t_delay/ttem) * (298295/ttem/20)):1/50;
         //var time = t_delay?(ttem * (298295/ttem/1000000)):1/50;
         //var time = ttem * (298295/ttem/1000000);
         //var time = t_delay;
         //var time = 1;
+        //var time = (imsHeader.basicTempo / 60) * t_delay;
+        //var time = (ttem / 60) * t_delay;
+        var time = ((480-ttem) / 60) * t_delay * 0.2 * (ttem/imsHeader.tickBeat);
+        //var time = (imsHeader.basicTempo / 60) * t_delay * 0.2;
         setTimeout(TimeOut, time);
     }
     chkCount++;
-}
-
-function prtCurByte(ch){
-    //curByte.innerText = cur_byte.format() + ' / ' + imsHeader.dataSize.format() + ' ( ' + (Math.round(cur_byte/imsHeader.dataSize*1000)/10) + '% )';
-    var b = cur_byte-71;
-    var s = imsHeader.dataSize;
-    ch=ch||'';
-    //curByte.innerText = b.format() + ' / ' + s.format() + ' ( ' + (Math.round(b/s*1000)/10) + '% )';
-    curByte.innerText = b.format() + ' / ' + s.format() + ' ( ' + (b/s*100).toFixed(2) + '% ) ' + ch;
-    //console.log('prtCurByte( '+ ch +' )');
 }
 
 function ins_rt( ch ){
@@ -408,16 +506,24 @@ function pit_rt( ch ){
 }
 
 function tem_rt(){
-    cur_byte+=2;
-    data1=uInt8Array[cur_byte++];
-    data2=uInt8Array[cur_byte++];
+    cur_byte+=2; // 0x7F 시작 0x00 예약 건너뜀
+    data1=uInt8Array[cur_byte++]; // XX
+    data2=uInt8Array[cur_byte++]; // YY 1/128
     ttem=imsHeader.basicTempo;
     ttem=ttem * data2 / 128 + imsHeader.basicTempo * data1;
     document.querySelector('#imsTempo').innerText = 'TEMPO : ' + Math.floor(ttem);
     rate=Math.floor(298295/ttem);
     SetClkRate(rate);
-    cur_byte++;
+    cur_byte++; // 0xF7 종료 건너뜀
 }
+/*
+	cur_tempo=(ttem=(unsigned long)(((unsigned long)basic_tempo*data2)>>7)+(unsigned long)basic_tempo*data1);
+	cur_tempo=(ttem=((basic_tempo*data2)>>7)+basic_tempo*data1);
+	if(ttem<=0) ttem=1;
+	rate=1193180L/(TPB*(unsigned long)(TEMPO=(unsigned)ttem)*ACC_TEMPO/6000);
+	SetClkRate(rate);
+*/
+
 
 cur_vol = [0,0,0,0,0, 0,0,0,0,0, 0];
 function note1_rt( ch ){
@@ -444,6 +550,7 @@ function note2_rt(ch){
     cur_byte+=2;
 }
 
+//////// Adlib Start
 function SetVoiceTimbre(ch, tibire){
     //console.log(new Date().toJSON(),'SetVoiceTimbre('+ch+', '+tibire+')',ins_name[tibire]);
     if(DEBUG) console.log('SetVoiceTimbre('+ch+', '+tibire+')',ins_name[tibire]);
@@ -503,6 +610,7 @@ function NoteOn ( ch, data ){
 //    ctx.fillStyle = NOTEC[ch];
 //    ctx.fillRect(canvasX,canvas.offsetHeight-data,1,1);
 }
+//////// Adlib End
 
 // 사운드 이퀄라이저 애니메이션
 function fluctuate(bar,vol,) {
@@ -555,11 +663,13 @@ function fluctuate(bar,vol,) {
         cur_byte = 71; // ims data 시작위치로
         //prtCurByte();  // cur_byte 관련 정보 출력 
         playTime=0;    // 연주시간 초기화
+        //tick=0;
 
         // canvas reset
         canvasX=0;
         ctx.clearRect(0,0,canvas.offsetWidth,canvas.offsetHeight);
 
+//        getDuration(); //재생시간 구함
     }
 
     var NOTE  = [0,0,0,0,0, 0,0,0,0,0, 0];
@@ -574,6 +684,8 @@ function fluctuate(bar,vol,) {
                 ctx.fillStyle = NOTEC[idx];
                 ctx.fillRect(canvasX,canvas.offsetHeight-item,1,1);
 
+                composer.draw(item, NOTEC[idx]);
+
                 fluctuate(document.querySelector('.bar-'+idx), cur_vol[idx]);
             }else
                 fluctuate(document.querySelector('.bar-'+idx), 1);
@@ -583,6 +695,7 @@ function fluctuate(bar,vol,) {
             canvasX=0;
             ctx.clearRect(0,0,canvas.offsetWidth,canvas.offsetHeight);
         }
+        composer.move();
         //if(isRun)setTimeout(DrawNote,20);
         if(isRun)setTimeout(DrawNote,18);
     }
@@ -608,55 +721,104 @@ var Timer = function(callback, delay) {
     this.resume();
 };
 
-var playTime = 0;
-/*
-var timer = new Timer( ()=>{
-    console.log('playTime',playTime);
-    runTime.innerText = `0${Math.floor(playTime/60)}:${(playTime%60).to2()}`;
-    playTime++;
-}, 1000 );
-*/
-var t = window.setInterval(function() {
-  if(isRun) {
-    runTime.innerText = `${Math.floor(playTime/60)}:${(playTime%60).to2()}`;
-    playTime++;
-  }
-}, 1000);
+    // Composer 관련개체
+    function Composer(id){
+        this.el = document.querySelector(id);
+        this.compCav = document.createElement('canvas');
+        this.el.appendChild(this.compCav);
+        //compCav.id = 'compCav';
+        this.compCav.width  = this.compCav.offsetWidth;
+        this.compCav.height = this.compCav.offsetHeight;
+        this.ctx = this.compCav.getContext("2d");
+        var resize = (()=>{ // 사이즈 변경시 
+            var el = this.compCav;
+            return (e)=>{
+                el.width  = el.offsetWidth;
+                el.height = el.offsetHeight;
+            }
+        })();
+        window.addEventListener("resize", resize);
+//        this.el.addEventListener("resize", resize); // 왜 안됨?
+        this.x = 0;
+    }
+    Composer.prototype = {
+         init : function(){ // 초기화
+            this.x=0;
+            this.ctx.clearRect(0,0,this.compCav.offsetWidth,this.compCav.offsetHeight);
+         }
+        ,set  : (param)=>{
+            if(param.color) {}
+        }
+        ,draw : function(y, color){ // 캔버스에 한 점 표시
+            this.ctx.fillStyle = color || 'blue';
+            this.ctx.fillRect(this.x,this.compCav.offsetHeight-y,1,1);
+        }
+        ,move : function(){
+            this.x = ++this.x % this.compCav.offsetWidth;
+            //this.ctx.clearRect(this.x,this.compCav.offsetHeight,10,this.compCav.offsetHeight);
+            if(!this.x) this.init();
+        }
+    }
 
-var ctx;
+
+    //재생시간 출력
+    var t = (()=>{
+        var playTime = 0;
+        return window.setInterval(function() {
+            if(isRun) {
+                runTime.innerText = `${Math.floor(playTime/60)}:${(playTime%60).to2()}`;
+                playTime++;
+            }
+        }, 1000)
+    })();
+
+    var composer;
     window.addEventListener("load", function(e){
         if(DEBUG) console.log(new Date().toJSON(),'window.onload START');
         //Ajax(url || 'KJM1.IMS')
         //Ajax(url || '100MEET.IMS')
         //Ajax(url || 'COM-DRAM.IMS')
-        Ajax(url || 'DEEPYOU.IMS')
-        orgTime.innerText = (+d).timeFormat();
+//        Ajax(url || 'DEEPYOU.IMS');
+        fetch(url || 'DEEPYOU.IMS')
+            .then(rs=>{return rs.arrayBuffer();})
+            .then(buffer => loadIMS(buffer));
+
+        orgTime.innerText = (+d).timeFormat(); // 목록에 받아온 재생시간값 화면표시
 
         var canvas = document.getElementById("canvas");
         canvas.width = canvas.offsetWidth;
         canvas.height = canvas.offsetHeight;
-        //var ctx = canvas.getContext("2d");
         ctx = canvas.getContext("2d");
-        ctx.fillStyle = "blue";
-        //ctx.fillRect(10, 10, 100, 100);
+        //canvasDiv
+
+        composer = new Composer('#canDiv');
         if(DEBUG) console.log(new Date().toJSON(),'window.onload END');
     });
-
+/*
+    window.addEventListener("resize", function(e){
+        console.log('resize');
+    });
+*/
   </script>
 </head>
 <body>
-<div style="display: -webkit-box;">
+<div style="display: -webkit-box;display:flex;flex-wrap:wrap;">
   <div id=imsTitle>Title</div>
   <button onClick="doStart()">⏮</button>
   <button id=btnPlay onClick="doRun()">▶️</button>
 </div>
 <div id=imsFile>Filename Size</div>
-<div id=imsTempoDiv><span id=runTime>0:00</span>/<span id=orgTime>00:49</span> <span id=imsTempo>TEMPO : 255</span> - TICK<span id=tickNo>0</span></div>
+<div id=imsTempoDiv style="display: -webkit-box;display:flex;flex-wrap:wrap;">
+  <span id=runTime>0:00</span>/<span id=orgTime>00:49</span>
+  <span id=imsTempo>Tempo : 255</span>
+  Time <span id=tickTime>0</span>
+  Tick <span id=tickNo>0</span>
+</div>
 <div id=cur_byteDiv>cur_byte : <span id=curByte>0</span></div>
 <div id=imsIns>
   <table border=0>
     <colgroup>
-      <col />
+      <col width=/>
       <col width=90 />
       <col width=127 />
     </colgroup>
@@ -668,12 +830,12 @@ var ctx;
       <td class=th>Vol</td>
       <td class=th>Note</td>
       <td class=th>Pan</td>
-      <td class=th>Event</td>
+      <td class="th insEven">Event</td>
     </tr>
     <tr>
       <td class="channel">01</td>
       <td class=insName id=insNmCh0>&nbsp;</td>
-      <td><hr id=insLvCh0 class="level"></td>
+      <td><span style="width:127px;"><hr id=insLvCh0 class="level"></span></td>
       <td class=insPitc id=insPitCh0>&nbsp;</td>
       <td class=insVolu id=insVolCh0>&nbsp;</td>
       <td class=insNote id=insNotCh0>&nbsp;</td>
@@ -781,7 +943,34 @@ var ctx;
       <td class=insEven id=insEvtCh10>&nbsp;</td>
     </tr>
   </table>
+<span style='flex-grow: 1;flex-basis: 200px;'>
+    <span class="eq">
+        <span class="bar bar-0"></span>
+        <span class="bar bar-1"></span>
+        <span class="bar bar-2"></span>
+        <span class="bar bar-3"></span>
+        <span class="bar bar-4"></span>
+        <span class="bar bar-5"></span>
+        <span class="bar bar-6"></span>
+        <span class="bar bar-7"></span>
+        <span class="bar bar-8"></span>
+        <span class="bar bar-9"></span>
+        <span class="bar bar-10"></span>
+    </span>
+    <!-- <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkqAcAAIUAgUW0RjgAAAAASUVORK5CYII="> -->
+    <span id=canvasDiv>
+      <canvas id="canvas" width="100" height="100">
+        캔버스의 내용을 설명하는 대체 텍스트
+      </canvas>
+    </span>
+</span>
 </div>
+
+<div style="display:flex;">
+<span id=volDiv style="width:50%;"></span>
+<span id=canDiv style="width:50%;"></span>
+</div>
+
 <!-- 
     <div class="bars-container">
         <div class="bar-1"></div>
@@ -794,7 +983,7 @@ var ctx;
     </div>
  -->
     <!-- <link rel="stylesheet" href="soundbars.css"> -->
-
+<!-- 
 <div class="eq">
     <span class="bar bar-0"></span>
     <span class="bar bar-1"></span>
@@ -813,6 +1002,7 @@ var ctx;
     캔버스의 내용을 설명하는 대체 텍스트
   </canvas>
 </div>
+ -->
 <div id=listDiv></div>
 <br>
 <div id=pageDiv></div>
