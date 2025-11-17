@@ -94,7 +94,7 @@
     flex-direction: row;
     align-items: flex-end;
 }
-canvas {
+#canvasDiv > canvas, #canDiv > canvas {
     border:1px #666666 solid;
     background-color:#181818;
     width:100%;
@@ -105,8 +105,40 @@ canvas {
         display: flex;
         flex-wrap: wrap;
     }
+
+
+    #lyricDiv {
+        border : 1px solid #444444;
+        /*position : fixed;*/
+        /*width : 100%;*/
+        width:633px;
+        background-color: #2d2d2d;
+        color: #888888;
+        height:45px;
+    }
+    #lyricDiv > pre {
+        /**/font-size: 12pt;/**/
+        /*font-family:monospace;*/
+        margin:0;
+    }
+    #lyricDiv > pre > span {
+        color:#3da126;
+    }
+
+    #keyboardDiv {
+        width:633px;
+    }
+    #keyboardDiv > canvas{
+        border:1px #666666 solid;
+        background-color:#181818;
+        width:100%;
+        height:42px;
+    }
+
+
   </style>
-  <script src="kssmcode.js?v1.00"></script>
+  <script src="kssmcode.js?v=<?=filemtime('kssmcode.js')?>"></script>
+  <script src="../iss/iss.js?v=<?=filemtime('../iss/iss.js')?>"></script>
   <script>
     var params = URLSearchParams && new URLSearchParams(document.location.search.substring(1));
     var url = params && params.get("url") && decodeURIComponent(params.get("url"));
@@ -116,7 +148,6 @@ canvas {
     Number.prototype.timeFormat = function(){ return Math.floor(this/60)+':'+(this%60).to2(); }
     Number.prototype.format = function(){return new String(this).replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",")}
 
-var ajaxcounter = 0;
 var file = '';
 var tick=0;
 var isRun = false;
@@ -479,6 +510,10 @@ function TimeOut(){
         var time = ((480-ttem) / 60) * t_delay * 0.2 * (ttem/imsHeader.tickBeat);
         //var time = (imsHeader.basicTempo / 60) * t_delay * 0.2;
         setTimeout(TimeOut, time);
+
+        // 가사 표시
+        //iss.play(tick);
+        iss.play(tick/8);
     }
     chkCount++;
 }
@@ -585,6 +620,10 @@ function NoteOff( ch ){
     document.querySelector('#insPanCh'+ch).innerText = '';
     document.querySelector('#insLvCh' +ch).style.width = '1px';
 
+    // 멜로디 채널만 건반 출력함
+    if(ch_num==11){
+        if(ch<7) keyboard.draw( NOTE[ch] ); // 건반색 복원
+    } else keyboard.draw( NOTE[ch] );
     NOTE[ch] = 0;
     //fluctuate(document.querySelector('.bar-'+ch), 1);
 }
@@ -605,6 +644,12 @@ function NoteOn ( ch, data ){
     document.querySelector('#insPanCh'+ch).innerText = '<>';
 
     NOTE[ch] = data;
+
+    // 멜로디 채널만 건반 출력함
+    if(ch_num==11){
+        if(ch<6) keyboard.draw( data, NOTEC[ch] );
+    } else keyboard.draw( data, NOTEC[ch] );
+
     //fluctuate(document.querySelector('.bar-'+ch), cur_vol[ch]);
 
 //    ctx.fillStyle = NOTEC[ch];
@@ -669,26 +714,30 @@ function fluctuate(bar,vol,) {
         canvasX=0;
         ctx.clearRect(0,0,canvas.offsetWidth,canvas.offsetHeight);
 
+        composer.init();
 //        getDuration(); //재생시간 구함
     }
 
     var NOTE  = [0,0,0,0,0, 0,0,0,0,0, 0];
     var NOTEC = ['#ff0000','#660000','#666600','#669900','#ffff00'
-                ,'#cc00ff','#cccc99','#006600','#003399','#3300ff', '#00ccff'];
+                ,'#cc00ff','#cccc99','#006600','#003399','#3300ff'
+                ,'#00ccff'];
     var canvasX=0;
     function DrawNote(){
-        //ctx.fillRect(canvasX,(Math.random()*100).toFixed(0),1,1);
-        //NOTE.forEach(item=>{if(item) ctx.fillRect(canvasX,item,1,1);});
         NOTE.forEach((item,idx)=>{
             if(item) {
                 ctx.fillStyle = NOTEC[idx];
                 ctx.fillRect(canvasX,canvas.offsetHeight-item,1,1);
-
-                composer.draw(item, NOTEC[idx]);
-
                 fluctuate(document.querySelector('.bar-'+idx), cur_vol[idx]);
-            }else
+
+                composer.draw( item, NOTEC[idx] );
+                volumeMeta.put( idx, cur_vol[idx] );
+              //keyboard.draw( item, NOTEC[idx] );
+            }else{
                 fluctuate(document.querySelector('.bar-'+idx), 1);
+                volumeMeta.put( idx, 1 );
+              //keyboard.draw( item );
+            }
         });
         canvasX++;
         if(canvasX>=canvas.offsetWidth){
@@ -700,27 +749,37 @@ function fluctuate(bar,vol,) {
         if(isRun)setTimeout(DrawNote,18);
     }
 
-var Timer = function(callback, delay) {
-    var timerId, start, remaining = delay;
-
-    this.pause = function() {
-        window.clearTimeout(timerId);
-        timerId = null;
-        remaining -= Date.now() - start;
-    };
-
-    this.resume = function() {
-        if (timerId) {
-            return;
+    /////////////////////////////////////////////////////////////
+    // 볼륨메타 관련개체 (혹은 Equalizer)
+    /////////////////////////////////////////////////////////////
+    function VolumeMeta(id){
+        this.el = document.querySelector(id);
+        var vHtml = '\
+                <span class="eq">\
+                    <span class="bar bar-0"></span>\
+                    <span class="bar bar-1"></span>\
+                    <span class="bar bar-2"></span>\
+                    <span class="bar bar-3"></span>\
+                    <span class="bar bar-4"></span>\
+                    <span class="bar bar-5"></span>\
+                    <span class="bar bar-6"></span>\
+                    <span class="bar bar-7"></span>\
+                    <span class="bar bar-8"></span>\
+                    <span class="bar bar-9"></span>\
+                    <span class="bar bar-10"></span>\
+                </span>\
+                ';
+        this.el.innerHTML = vHtml;
+    }
+    VolumeMeta.prototype = {
+        put:function(idx, vol){
+            //console.log(this.el.querySelector('.bar-'+idx))
+            //console.log(vol);
+            fluctuate(this.el.querySelector('.bar-'+idx), vol);
         }
+    }
 
-        start = Date.now();
-        timerId = window.setTimeout(callback, remaining);
-    };
-
-    this.resume();
-};
-
+    /////////////////////////////////////////////////////////////
     // Composer 관련개체
     function Composer(id){
         this.el = document.querySelector(id);
@@ -738,7 +797,7 @@ var Timer = function(callback, delay) {
             }
         })();
         window.addEventListener("resize", resize);
-//        this.el.addEventListener("resize", resize); // 왜 안됨?
+      //this.el.addEventListener("resize", resize); // 왜 안됨?
         this.x = 0;
     }
     Composer.prototype = {
@@ -759,7 +818,231 @@ var Timer = function(callback, delay) {
             if(!this.x) this.init();
         }
     }
+    /////////////////////////////////////////////////////////////
 
+    /////////////////////////////////////////////////////////////
+    // 키보드 개체
+    function Keyboard(id){
+        var el = document.querySelector(id);
+        this.kbCav = document.createElement('canvas');
+        el.appendChild(this.kbCav);
+        //kbCav.id = 'kbCav';
+        this.kbCav.width  = this.kbCav.offsetWidth;
+        this.kbCav.height = this.kbCav.offsetHeight;
+        //this.kbCav.height = '640px';
+        //this.kbCav.height = '40px';
+        this.ctx = this.kbCav.getContext("2d");
+        /*
+        var resize = (()=>{ // 사이즈 변경시 
+            var el = this.kbCav;
+            return (e)=>{
+                el.width  = el.offsetWidth;
+                el.height = el.offsetHeight;
+            }
+        })();
+        window.addEventListener("resize", resize);
+        */
+        //this.x = 0;
+        this.init();
+        this.PIT_METER=["c", "cs", "d", "ds", "e", "f", "fs", "g", "gs", "a", "as", "b"];
+    }
+    Keyboard.prototype = {
+        init:function(){
+            var w = this.kbCav.offsetWidth;
+            var h = this.kbCav.offsetHeight;
+            with(this.ctx){
+//                fillStyle = 'blue';
+                beginPath();
+                moveTo(1,1); // 7
+                lineTo(w-1,1);
+                strokeStyle = "#929ebe";
+                stroke();
+
+                fillStyle = '#6d5d79'; // #6a5a75
+                fillRect(1,2,w-2,39);
+                for(var i=0; i<10; i++){ // 9옥타브 건반 출력
+                    this.c (i);
+                    this.cs(i);
+                    this.d (i);
+                    this.ds(i);
+                    this.e (i);
+                    this.f (i);
+                    this.fs(i);
+                    this.g (i);
+                    this.gs(i);
+                    this.a (i);
+                    this.as(i);
+                    this.b (i);
+                }
+            }
+        }
+       ,draw:function(data, color){
+            var scale = this.PIT_METER[ data%12 ];
+            var oktave = Math.floor(data/12) -1;
+            try{
+                this[scale](oktave, color);
+            }catch(e){
+                console.log('data', data, 'scale', scale, 'oktave', oktave)
+                console.log(e.message)
+            }
+        }
+       ,oktave:(num)=>{return num*63;} // 한옥타브 넓이
+       ,c:function(oktave, color){
+            color=color||'#f5f5f5';
+            var left=2 + this.oktave( oktave||0 )
+            with(this.ctx){
+                beginPath();
+                moveTo(left  , 2);
+                lineTo(left  ,40);
+                lineTo(left+8,40);
+                lineTo(left+8,22);
+                lineTo(left+6,22);
+                lineTo(left+6, 2);
+                fillStyle = color;
+                fill();
+            }
+        }
+       ,cs:function(oktave, color){
+            color=color||'black';
+            var left=8 + this.oktave( oktave||0 )
+            with(this.ctx){
+                fillStyle = color;
+                fillRect(left,1,5,21);
+            }
+        }
+       ,d:function(oktave, color){
+            color=color||'#f5f5f5';
+            var left=13 + this.oktave( oktave||0 )
+            with(this.ctx){
+                beginPath();
+                moveTo(left  , 2);
+                lineTo(left  ,22);
+                lineTo(left-2,22);
+                lineTo(left-2,40);
+                lineTo(left+6,40);
+                lineTo(left+6,22);
+                lineTo(left+4,22);
+                lineTo(left+4, 2);
+                fillStyle = color;
+                fill();
+            }
+        }
+       ,ds:function(oktave, color){
+            color=color||'black';
+            var left=17 + this.oktave( oktave||0 )
+            with(this.ctx){
+                fillStyle = color;
+                fillRect(left,1,5,21);
+            }
+        }
+       ,e:function(oktave, color){
+            color=color||'#f5f5f5';
+            var left=22 + this.oktave( oktave||0 )
+            with(this.ctx){
+                beginPath();
+                moveTo(left  , 2);
+                lineTo(left  ,22);
+                lineTo(left-2,22);
+                lineTo(left-2,40);
+                lineTo(left+6,40);
+                lineTo(left+6, 2);
+                fillStyle = color;
+                fill();
+            }
+        }
+       ,f:function(oktave, color){
+            color=color||'#f5f5f5';
+            var left=29 + this.oktave( oktave||0 )
+            with(this.ctx){
+                beginPath();
+                moveTo(left  , 2);
+                lineTo(left  ,40);
+                lineTo(left+8,40);
+                lineTo(left+8,22);
+                lineTo(left+6,22);
+                lineTo(left+6, 2);
+                fillStyle = color;
+                fill();
+            }
+        }
+       ,fs:function(oktave, color){
+            color=color||'black';
+            var left=35 + this.oktave( oktave||0 )
+            with(this.ctx){
+                fillStyle = color;
+                fillRect(left,1,5,21);
+            }
+        }
+       ,g:function(oktave, color){
+            color=color||'#f5f5f5';
+            var left=40 + this.oktave( oktave||0 )
+            with(this.ctx){
+                beginPath();
+                moveTo(left  , 2);
+                lineTo(left  ,22);
+                lineTo(left-2,22);
+                lineTo(left-2,40);
+                lineTo(left+6,40);
+                lineTo(left+6,22);
+                lineTo(left+4,22);
+                lineTo(left+4, 2);
+                fillStyle = color;
+                fill();
+            }
+        }
+       ,gs:function(oktave, color){
+            color=color||'black';
+            var left=44 + this.oktave( oktave||0 )
+            with(this.ctx){
+                fillStyle = color;
+                fillRect(left,1,5,21);
+            }
+        }
+       ,a:function(oktave, color){
+            color=color||'#f5f5f5';
+            var left=49 + this.oktave( oktave||0 )
+            with(this.ctx){
+                beginPath();
+                moveTo(left  , 2);
+                lineTo(left  ,22);
+                lineTo(left-2,22);
+                lineTo(left-2,40);
+                lineTo(left+6,40);
+                lineTo(left+6,22);
+                lineTo(left+4,22);
+                lineTo(left+4, 2);
+                fillStyle = color;
+                fill();
+            }
+        }
+       ,as:function(oktave, color){
+            color=color||'black';
+            var left=53 + this.oktave( oktave||0 )
+            with(this.ctx){
+                fillStyle = color;
+                fillRect(left,1,5,21);
+            }
+        }
+       ,b:function(oktave, color){
+            color=color||'#f5f5f5';
+            var left=58 + this.oktave( oktave||0 )
+            with(this.ctx){
+                beginPath();
+                moveTo(left  , 2);
+                lineTo(left  ,22);
+                lineTo(left-2,22);
+                lineTo(left-2,40);
+                lineTo(left+6,40);
+                lineTo(left+6, 2);
+                fillStyle = color;
+                fill();
+            }
+        }
+
+    }
+    /////////////////////////////////////////////////////////////
+
+    /////////////////////////////////////////////////////////////
 
     //재생시간 출력
     var t = (()=>{
@@ -772,14 +1055,20 @@ var Timer = function(callback, delay) {
         }, 1000)
     })();
 
-    var composer;
+    var volumeMeta; // 볼륨메타 개체
+    var composer;   // 컴포저 개체
+    var iss = {play:()=>{}}; // 가사
+    var keyboard;   // 키보드 
+
     window.addEventListener("load", function(e){
         if(DEBUG) console.log(new Date().toJSON(),'window.onload START');
         //Ajax(url || 'KJM1.IMS')
         //Ajax(url || '100MEET.IMS')
         //Ajax(url || 'COM-DRAM.IMS')
-//        Ajax(url || 'DEEPYOU.IMS');
-        fetch(url || 'DEEPYOU.IMS')
+        //Ajax(url || 'DEEPYOU.IMS');
+        var ims = url||''?url+'.IMS':'';
+console.log('ims',ims);
+        fetch(escape(ims) || 'DEEPYOU.IMS')
             .then(rs=>{return rs.arrayBuffer();})
             .then(buffer => loadIMS(buffer));
 
@@ -791,7 +1080,28 @@ var Timer = function(callback, delay) {
         ctx = canvas.getContext("2d");
         //canvasDiv
 
-        composer = new Composer('#canDiv');
+        volumeMeta = new VolumeMeta('#volDiv'); // 볼륨메타 표시기
+        composer = new Composer('#canDiv'); // 컴포저 표시기
+
+        var issUrl = url||''?url+'.ISS':'';
+        if( issUrl ){
+            fetch(escape(issUrl) || '')
+                .then(rs=>{
+                    if(rs.ok){
+                        return rs.arrayBuffer();
+                    }else throw new Error(`${rs.status} 에러가 발생했습니다.`)
+                })
+    //            .then(buffer => console.log('iss',buffer));
+                .then(buffer=>{
+//                    alert('가사')
+                    iss = new ISS(buffer);       // 가사
+                    iss.viewLyric('#lyricDiv');
+                    //alert(iss)
+                });
+        }
+
+        keyboard = new Keyboard('#keyboardDiv');
+
         if(DEBUG) console.log(new Date().toJSON(),'window.onload END');
     });
 /*
@@ -808,10 +1118,9 @@ var Timer = function(callback, delay) {
   <button id=btnPlay onClick="doRun()">▶️</button>
 </div>
 <div id=imsFile>Filename Size</div>
-<div id=imsTempoDiv style="display: -webkit-box;display:flex;flex-wrap:wrap;">
-  <span id=runTime>0:00</span>/<span id=orgTime>00:49</span>
+<div id=imsTempoDiv style="display: -webkit-box;/*display:flex;*/flex-wrap:wrap;">
+  <span id=runTime>0:00</span>/<span id=orgTime>00:49</span>/<span id=tickTime>0</span>
   <span id=imsTempo>Tempo : 255</span>
-  Time <span id=tickTime>0</span>
   Tick <span id=tickNo>0</span>
 </div>
 <div id=cur_byteDiv>cur_byte : <span id=curByte>0</span></div>
@@ -957,7 +1266,7 @@ var Timer = function(callback, delay) {
         <span class="bar bar-9"></span>
         <span class="bar bar-10"></span>
     </span>
-    <!-- <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkqAcAAIUAgUW0RjgAAAAASUVORK5CYII="> -->
+    <br>
     <span id=canvasDiv>
       <canvas id="canvas" width="100" height="100">
         캔버스의 내용을 설명하는 대체 텍스트
@@ -966,43 +1275,20 @@ var Timer = function(callback, delay) {
 </span>
 </div>
 
+<!-- 사운드이퀄라이저, 컴포저를 개체 생성으로 그릴 위치 -->
 <div style="display:flex;">
-<span id=volDiv style="width:50%;"></span>
-<span id=canDiv style="width:50%;"></span>
+    <span id=volDiv style="width:50%;"></span>
+    <span id=canDiv style="width:50%;"></span>
 </div>
 
-<!-- 
-    <div class="bars-container">
-        <div class="bar-1"></div>
-        <div class="bar-2"></div>
-        <div class="bar-3"></div>
-        <div class="bar-4"></div>
-        <div class="bar-5"></div>
-        <div class="bar-6"></div>
-        <div class="bar-7"></div>
-    </div>
- -->
-    <!-- <link rel="stylesheet" href="soundbars.css"> -->
-<!-- 
-<div class="eq">
-    <span class="bar bar-0"></span>
-    <span class="bar bar-1"></span>
-    <span class="bar bar-2"></span>
-    <span class="bar bar-3"></span>
-    <span class="bar bar-4"></span>
-    <span class="bar bar-5"></span>
-    <span class="bar bar-6"></span>
-    <span class="bar bar-7"></span>
-    <span class="bar bar-8"></span>
-    <span class="bar bar-9"></span>
-    <span class="bar bar-10"></span>
-</div>
-<div id=canvasDiv>
-  <canvas id="canvas" width="100" height="100">
-    캔버스의 내용을 설명하는 대체 텍스트
-  </canvas>
-</div>
- -->
+<!-- 가사 출력 위치 -->
+<div id=lyricDiv><pre>&nbsp;</pre></div>
+
+<!-- 건반 출력 위치 -->
+<div id=keyboardDiv></div>
+
+
+
 <div id=listDiv></div>
 <br>
 <div id=pageDiv></div>
