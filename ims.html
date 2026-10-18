@@ -151,7 +151,9 @@
 var file = '';
 var tick=0;
 var isRun = false;
+//var DEBUG = true;
 var DEBUG = false;
+let seqTimeout = null;
 
     var uInt8Array;
     var imsHeader;
@@ -436,6 +438,8 @@ if(t_delay>20000) console.log(t_delay, ttem, data1, 60*t_delay/imsHeader.tickBea
 
 chkCount = 0;
 var startTime = 0;
+var timer = null;
+var playTime = 0;
 function TimeOut(){
     idcode = uInt8Array[cur_byte];
 
@@ -507,13 +511,44 @@ function TimeOut(){
         //var time = 1;
         //var time = (imsHeader.basicTempo / 60) * t_delay;
         //var time = (ttem / 60) * t_delay;
+
+
         var time = ((480-ttem) / 60) * t_delay * 0.2 * (ttem/imsHeader.tickBeat);
         //var time = (imsHeader.basicTempo / 60) * t_delay * 0.2;
-        setTimeout(TimeOut, time);
+        //setTimeout(TimeOut, time);
+
+            let tempo    = imsHeader.basicTempo || 120;
+            let tickBeat = imsHeader.tickBeat || 24;
+          //let msDelay  = t_delay * (60000 / (tempo * tickBeat));
+          //let msDelay  = t_delay * (60000*0.83 / (tempo * tickBeat));
+            let msDelay  = t_delay * (40000 / (tempo * tickBeat));
+
+            //if(msDelay <= 0) TimeOut();
+            //else seqTimeout = setTimeout(TimeOut, msDelay);
+        
 
         // 가사 표시
         //iss.play(tick);
         iss.play(tick/8);
+        
+        // 시간차 재기동
+        var add = 60*t_delay/imsHeader.tickBeat/ttem;
+        playTime += add; // 재생시간
+        // 템포로 시간 계산        
+        //    return ((imsHeader.basicTempo || 120) * (imsHeader.tickBeat || 24)) / 60 / 1000;
+        //var time = ((imsHeader.basicTempo || 120) * (imsHeader.tickBeat || 24)) / 60 / 1000;
+        //var time = ((imsHeader.basicTempo || 120) * (ttem || 24)) / 60 / 1000;
+        var time = add*890;
+        //console.log('time',time, ttem, add, playTime)
+        console.log('time',playTime)
+        //if(isRun) timer = setTimeout(TimeOut, time);
+        if(isRun){
+            if(add) timer = setTimeout(TimeOut, time);
+            else TimeOut();
+            //if(add<0)TimeOut();
+            //else     timer = setTimeout(TimeOut, time);
+        }
+
     }
     chkCount++;
 }
@@ -694,6 +729,7 @@ function fluctuate(bar,vol,) {
             //btnPlay.innerText = 'Play';
             btnPlay.innerText = '▶️';
             isRun = false;
+            if(timer) clearTimeout(timer);
         } else {
             startTime = new Date().getTime();
             console.log(new Date().toJSON(),'Play')
